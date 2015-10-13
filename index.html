@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Roadshow</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- MetisMenu CSS -->
+    <link href="bower_components/metisMenu/dist/metisMenu.min.css" rel="stylesheet">
+
+    <!-- Timeline CSS -->
+    <link href="dist/css/timeline.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="dist/css/sb-admin-2.css" rel="stylesheet">
+
+    <!-- ServerTools Custom CSS -->
+    <link href="dist/css/stcustom.css" rel="stylesheet">
+
+    <!-- Morris Charts CSS -->
+    <link href="bower_components/morrisjs/morris.css" rel="stylesheet">
+
+    <!-- Custom Fonts -->
+    <link href="bower_components/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <link rel="apple-touch-icon" href="bower_components/coffee-icon.png">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?sensor=false"></script>
+    <script src="http://code.jquery.com/jquery-1.11.2.min.js"></script>
+
+    <script type="text/javascript">
+
+    var serverLocation = "http://172.18.1.74/roadshow/"
+
+    function parseGet(val) {
+        var result = "Not found",
+            tmp = [];
+        location.search
+        //.replace ( "?", "" ) 
+        // this is better, there might be a question mark inside
+        .substr(1)
+            .split("&")
+            .forEach(function (item) {
+            tmp = item.split("=");
+            if (tmp[0] === val) result = decodeURIComponent(tmp[1]);
+        });
+        return result;
+    }    
+
+
+    document.addEventListener('touchmove', function(event) {
+       if(event.target.parentNode.className.indexOf('navbar-static-top') != -1 
+    || event.target.className.indexOf('navbar-static-top') != -1 ) {
+        event.preventDefault(); }
+    }, false);
+
+    function getCookie(cname) {
+        var name = cname + "=";
+        var ca = document.cookie.split(';');
+        for(var i=0; i<ca.length; i++) {
+            var c = ca[i];
+            while (c.charAt(0)==' ') c = c.substring(1);
+            if (c.indexOf(name) == 0) {
+                return c.substring(name.length,c.length);
+            }
+            else {
+                return "nocookie";
+            }
+        }
+
+    }
+
+    function logout() {
+
+        var SessionId = document.getElementById("CLICKA_currentSessionId").innerHTML;
+
+        document.cookie = "CLICKA_currentSessionId=; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+
+        var logout = ajaxRequest(serverLocation + "system/internaltarget.php?Action=logout&SessionId=" + SessionId);
+
+        document.getElementById("CLICKA_currentSessionId").innerHTML = "0";
+        document.getElementById("side-menu").style.display="none";
+        document.getElementById("topbartext").innerHTML = "Roadshow"
+
+        loadScript('publichome')
+
+    }
+
+
+    function getSessionVar(VarName) {
+
+        var SessionId = document.getElementById("CLICKA_currentSessionId").innerHTML;
+
+        var VarVal = ajaxRequest(serverLocation + "system/internaltarget.php?Action=getSessionVar&SessionId=" + SessionId + "&VarName=" + VarName);
+
+        return VarVal;
+
+    }
+
+    function setSessionVar(VarName,VarVal) {
+
+        var SessionId = document.getElementById("CLICKA_currentSessionId").innerHTML;
+
+
+        var Resp = ajaxRequest(serverLocation + "system/internaltarget.php?Action=setSessionVar&SessionId=" + SessionId + "&VarName=" + VarName + "&VarVal=" + VarVal);
+
+        if(Resp=="success") {
+            return true;
+        }
+        else {
+            return false;
+        }
+
+
+    }
+
+    $(window).load(function(){
+
+        var ping = ajaxRequest(serverLocation + "system/internaltarget.php?Action=ping");
+        if(ping=="pong") {
+            // all is fine with the world.
+        }
+        else {
+            $('#notConnectedDisplay').modal('show');
+        }
+
+        var SessionIdCookie = getCookie("CLICKA_currentSessionId");
+        
+
+        if(SessionIdCookie=="nocookie") {
+            document.getElementById("CLICKA_currentSessionId").innerHTML = "0";
+            document.getElementById("side-menu").style.display="none";
+        }
+        else {
+            document.getElementById("CLICKA_currentSessionId").innerHTML = SessionIdCookie;
+            document.getElementById("side-menu").style.display="";
+        }
+
+        var get_go = parseGet("go");
+        
+        var LastScript = getSessionVar("currentScript");
+        var LastScriptParams = getSessionVar("currentScriptParams");
+        LastScript = typeof LastScript !== 'undefined' ? LastScript : "chooseform";
+        LastScriptParams = typeof LastScriptParams !== 'undefined' ? LastScriptParams : "param2:value2;param3:value3";
+
+        //alert(LastScript)
+
+        if(get_go=="newSession") {
+
+            logout();
+
+        } else {
+
+            if(SessionIdCookie=="nocookie") {
+                loadScript('publichome');
+            }
+            else {
+                loadScript(LastScript,LastScriptParams);
+            }
+
+        }
+
+       
+    });
+
+
+
+    function ajaxRequest(path) {
+
+       // document.getElementById('loadingdiv').style.visibility="visible"
+
+        var xmlhttp;
+        xmlhttp=new XMLHttpRequest();
+     
+        xmlhttp.open("GET",path,false);
+        xmlhttp.send();
+        var RESPONSE = xmlhttp.responseText;
+          
+        return RESPONSE;
+        delete window.xmlhttp;
+
+        document.getElementById('loadingdiv').style.visibility="hidden"
+
+    }
+
+
+    function loadScript(ScriptAlias,Params) {
+
+        document.getElementById('loadingdiv').style.visibility="hidden";
+
+        Params = typeof Params !== 'undefined' ? Params : "param2:value2;param3:value3";
+
+        var ping = ajaxRequest(serverLocation + "system/internaltarget.php?Action=ping");
+        if(ping=="pong") {
+            // all is fine with the world.
+        }
+        else {
+            $('#notConnectedDisplay').modal('show');
+        }
+
+        var intervalId = getSessionVar("currentIntervalId");
+
+        //alert(intervalId)
+        clearInterval(intervalId)
+
+        var CLICKA_SessionId = document.getElementById("CLICKA_currentSessionId").innerHTML;
+
+        $.ajax({
+          url: serverLocation + "system/internaltarget.php?Action=requestScript&ScriptAlias="+ScriptAlias+"&Params=" + Params + "&SessionId=" + CLICKA_SessionId,
+          type: 'GET',
+          //data: 'twitterUsername=jquery4u',
+          success: function(data) {
+            //called when successful
+            parseLoadScript(data,ScriptAlias,Params)
+          },
+          error: function(e) {
+            //called when there is an error
+            //console.log(e.message);
+          }
+        });
+     
+
+        document.getElementById('loadingdiv').style.visibility="hidden";
+
+        
+               
+
+
+
+    }
+
+    function parseLoadScript(scriptoutputdata,ScriptAlias,Params) {
+
+       // alert(scriptoutputdata)
+        var CLICKA_SessionId = document.getElementById("CLICKA_currentSessionId").innerHTML;
+
+
+        if(scriptoutputdata.indexOf("<ERR>") > -1) {
+            $('#errorDisplay').modal('show');
+            var ErrorDescription = ajaxRequest(serverLocation + "system/internaltarget.php?Action=requestErrorInfo&ErrCode="+scriptoutputdata+"&Field=Description");
+            var ErrorSolution = ajaxRequest(serverLocation + "system/internaltarget.php?Action=requestErrorInfo&ErrCode="+scriptoutputdata+"&Field=Solution");
+            document.getElementById("errDescription").innerHTML = ErrorDescription
+            document.getElementById("errSolution").innerHTML = ErrorSolution
+
+        }
+        else {
+            if(document.getElementById('page-wrapper').innerHTML!=scriptoutputdata) {
+            document.getElementById('page-wrapper').innerHTML = scriptoutputdata;
+            }
+
+             if(CLICKA_SessionId=="0") {
+                // dont set
+            } else {
+                setSessionVar("currentScript",ScriptAlias);
+                setSessionVar("currentScriptParams",Params);
+            }
+        }  
+
+         $("#page-wrapper").find("script").each(function(i) {
+                    eval($(this).text());
+                scriptLoaded();
+
+                });  
+
+
+    }
+
+    function reloadCurrentScript() {
+
+        var LastScript = getSessionVar("currentScript");
+        var LastScriptParams = getSessionVar("currentScriptParams");
+        LastScript = typeof LastScript !== 'undefined' ? LastScript : "chooseform";
+        LastScriptParams = typeof LastScriptParams !== 'undefined' ? LastScriptParams : "param2:value2;param3:value3";
+
+
+        loadScript(LastScript,LastScriptParams);
+
+    }
+
+    function submitLogin() {
+
+        var UsernameEmail = document.getElementById('Username').value;
+        var UserPassword = document.getElementById('Password').value;
+
+        var CookiesExpire = ajaxRequest(serverLocation + "system/internaltarget.php?Action=cookieExpiry")
+
+        var LoginResponse = ajaxRequest(serverLocation + "system/internaltarget.php?Action=signIn&Username="+UsernameEmail+"&Password="+UserPassword);
+
+        if(LoginResponse=="<ERR>System.InternalTarget.signIn.AccessDenied") {
+            $('#loginToRoadshow').modal('hide');
+            $('#errorDisplay').modal('show');
+
+            var ErrorDescription = ajaxRequest(serverLocation + "system/internaltarget.php?Action=requestErrorInfo&ErrCode="+LoginResponse+"&Field=Description");
+            var ErrorSolution = ajaxRequest(serverLocation + "system/internaltarget.php?Action=requestErrorInfo&ErrCode="+LoginResponse+"&Field=Solution");
+            document.getElementById("errDescription").innerHTML = ErrorDescription
+            document.getElementById("errSolution").innerHTML = ErrorSolution
+            document.getElementById("errDismiss").onclick=showLoginScreen;
+        }
+
+        else {
+            $('#loginToRoadshow').modal('hide');
+            
+            document.getElementById("CLICKA_currentSessionId").innerHTML = LoginResponse;
+            document.cookie="CLICKA_currentSessionId=" + LoginResponse + "; expires="+CookiesExpire;
+            document.getElementById("side-menu").style.display="";
+
+            loadScript('chooseform');
+        }
+
+       
+
+    }
+
+
+    function showLoginScreen() {
+            $('#loginToRoadshow').modal('show');
+            $('#errorDisplay').modal('hide');
+    }
+
+    function doSearch() {
+
+        $('#searchResults').modal('show');
+
+        var retval = ajaxRequest(serverLocation + "system/searchresults.php?q=" + document.getElementById('searchQ').value);
+        document.getElementById('searchResultsArea').innerHTML = retval;
+
+
+    }
+
+    function closeSearch() {
+        $('#searchResults').modal('hide');
+
+    }
+
+    
+
+    function displayError(scriptoutputdata) {
+
+        $('#errorDisplay').modal('show');
+            var ErrorDescription = ajaxRequest(serverLocation + "system/internaltarget.php?Action=requestErrorInfo&ErrCode="+scriptoutputdata+"&Field=Description");
+            var ErrorSolution = ajaxRequest(serverLocation + "system/internaltarget.php?Action=requestErrorInfo&ErrCode="+scriptoutputdata+"&Field=Solution");
+            document.getElementById("errDescription").innerHTML = ErrorDescription
+            document.getElementById("errSolution").innerHTML = ErrorSolution
+
+
+    }
+
+
+    function chooseForm(FormId) {
+
+        setSessionVar("currentlySelectedForm",FormId);
+        $('#formChosen').modal('show');
+
+    }
+
+
+    function exitFormEntry() {
+
+        setSessionVar("currentScript","chooseform");
+        location.reload()
+
+
+    }
+
+
+    
+	</script>
+
+</head>
+
+<body>
+
+	<div class="modal fade" id="loginToRoadshow" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+	    <div class="modal-dialog">
+	        <div class="modal-content">
+	            <div class="modal-header">
+	                <!--button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button-->
+	                <h4 class="modal-title" id="myModalLabel">Sign in to Roadshow</h4>
+	            </div>
+	            <div class="modal-body" align="center">
+	            	<div style="width:300px;" align="left">
+	                <form role="form">
+                            <fieldset>
+                                <div class="form-group">
+                                    Email Address <input class="form-control" placeholder="Username" id="Username" name="username" type="email" autofocus>
+                                </div>
+                                <div class="form-group">
+                                    Password <input class="form-control" placeholder="Password" name="password" type="password" id="Password" value="">
+                                </div>
+                      
+                            </fieldset>
+                        </form>
+                    </div>
+	            </div>
+	            <div class="modal-footer">
+	                <button type="button" class="btn btn-default" onclick="$('#loginToRoadshow').modal('hide');">Cancel</button>
+	                <!--button type="button" class="btn btn-default" data-dismiss="modal">Quit</button-->
+	                <button type="button" class="btn btn-primary" onclick="submitLogin()">Sign In</button>
+	            </div>
+	        </div>
+	    </div>
+	</div>
+    <div class="modal fade" id="searchResults" tabindex="-1" role="dialog" aria-labelledby="searchreslabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <!--button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button-->
+                    <h4 class="modal-title" id="searchreslabel">Search Results</h4>
+                </div>
+                <div class="modal-body" align="left">
+                    
+                        <div id="searchResultsArea"></div>
+                  
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" onclick="closeSearch()">Close Search</button>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="errorDisplay" tabindex="-1" role="dialog" aria-labelledby="myModalLabel2" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <!--button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button-->
+                    <h4 class="modal-title" id="myModalLabel2">An error has occured...</h4>
+                </div>
+                <div class="modal-body">
+                    <p><strong><span id="errDescription"></span></strong></p>
+                    <p><i>Solution:</i><br><span id="errSolution"></span></p>
+
+                </div>
+                <div class="modal-footer">
+                    
+                    <!--button type="button" class="btn btn-default" data-dismiss="modal">Quit</button-->
+                    <button type="button" class="btn btn-primary" onclick="$('#errorDisplay').modal('hide');" id="errDismiss">Dismiss</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="notConnectedDisplay" tabindex="-1" role="dialog" aria-labelledby="myModalLabel4" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <!--button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button-->
+                    <h4 class="modal-title" id="myModalLabel4">Can't Connect to Roadshow</h4>
+                </div>
+                <div class="modal-body">
+                    <h2>Unfortunately, you need an internet connection to use Roadshow. </h2>
+                    Please ensure your mobile data is switched on or you are connected to wifi and then Try Again. If you are sure that you are connected to the internet (try googling something for example) then please go to www.Roadshow.co.nz/cantconnect and report the problem.
+
+                </div>
+                <div class="modal-footer">
+                    
+                    <!--button type="button" class="btn btn-default" data-dismiss="modal">Quit</button-->
+                    <button type="button" class="btn btn-primary" onclick="location.reload()">Try Again</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="formChosen" tabindex="-1" role="dialog" aria-labelledby="formChosen" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <!--button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button-->
+                    <h4 class="modal-title" id="formChosen">Your Form Has Been Choosen</h4>
+                </div>
+                <div class="modal-body">
+                    <h2>Do you want to fill out this form or view submissions?</h2>
+                    <button type="button" class="btn btn-primary btn-lg btn-block" onclick="loadScript('filloutform')">Fill Out This Form</button>
+                    <button type="button" class="btn btn-primary btn-lg btn-block" onclick="loadScript('formsubmissions')">View Form Submissions</button>
+
+                </div>
+                <div class="modal-footer">
+                    
+                    <!--button type="button" class="btn btn-default" data-dismiss="modal">Quit</button-->
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="loadingdiv">Loading...</div>
+    <div id="wrapper">
+
+        <!-- igation -->
+        <nav class="navbar navbar-default navbar-static-top" role="navigation" style="margin-bottom: 0; position:fixed; width:100%;">
+            <div class="navbar-header" align="center">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <!--a class="navbar-brand" href="#" onclick="loadScript('publichome')">Roadshow</a--><span class="navbar-brand" id="topbartext">Roadshow</span>
+            </div>
+            <!-- /.navbar-header -->
+
+            <!--ul class="nav navbar-top-links navbar-right">
+                <li class="dropdown">
+                   
+                    <ul class="dropdown-menu dropdown-messages">
+                        <li>
+                            <a href="#">
+                                <div>
+                                    <strong>John Smith</strong>
+                                    <span class="pull-right text-muted">
+                                        <em>Yesterday</em>
+                                    </span>
+                                </div>
+                                <div>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque eleifend...</div>
+                            </a>
+                        </li>
+                        <li class="divider"></li>
+                        <li>
+                            <a href="#">
+                                <div>
+                                    <strong>John Smith</strong>
+                                    <span class="pull-right text-muted">
+                                        <em>Yesterday</em>
+                                    </span>
+                                </div>
+                                <div>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque eleifend...</div>
+                            </a>
+                        </li>
+                        <li class="divider"></li>
+                        <li>
+                            <a href="#">
+                                <div>
+                                    <strong>John Smith</strong>
+                                    <span class="pull-right text-muted">
+                                        <em>Yesterday</em>
+                                    </span>
+                                </div>
+                                <div>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque eleifend...</div>
+                            </a>
+                        </li>
+                        <li class="divider"></li>
+                        <li>
+                            <a class="text-center" href="#">
+                                <strong>Read All Messages</strong>
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                    <!-- /.dropdown-messages
+                </li>
+                <!-- /.dropdown -->
+                
+                <!-- /.dropdown -->
+                
+                <!-- /.dropdown 
+            </ul>
+            <!-- /.navbar-top-links -->
+
+            <div class="navbar-default sidebar" role="navigation" id="sidenav">
+                <div class="sidebar-nav navbar-collapse collapse" aria-expanded="false">
+                    <ul class="nav" id="side-menu" style="display:none;">
+                        <!--li class="sidebar-search">
+                            <div class="input-group custom-search-form">
+                                <input type="text" class="form-control" placeholder="Search..." id="searchQ">
+                                <span class="input-group-btn">
+                                <button class="btn btn-default" type="button" id="searchbutton" onclick="doSearch()">
+                                    <i class="fa fa-search"></i>
+                                </button>
+                            </span>
+                            </div>
+                            <!-- /input-group -->
+                        <!--/li-->
+                        <li onclick="loadScript('chooseform')">
+                           <a data-toggle="collapse" data-target=".navbar-collapse"><i class="fa fa-crosshairs fa-fw"></i> Choose Form</a>
+                        </li>
+                        <li onclick="loadScript('filloutform')">
+                           <a data-toggle="collapse" data-target=".navbar-collapse"><i class="fa fa-edit fa-fw"></i> Fill Out Form</a>
+                        </li>
+                        <li onclick="loadScript('formsubmissions')">
+                           <a data-toggle="collapse" data-target=".navbar-collapse"><i class="fa fa-list-ul fa-fw"></i> View Submissions</a>
+                        </li>
+                        <li onclick="logout()">
+                           <a data-toggle="collapse" data-target=".navbar-collapse"><i class="fa fa-user fa-fw"></i> Logout</a>
+                        </li>
+                        
+                    </ul>
+                </div>
+                <!-- /.sidebar-collapse -->
+            </div>
+            <!-- /.navbar-static-side -->
+        </nav>
+
+        <div id="page-wrapper" style="padding-top:40px;">
+           &nbsp;  
+        </div>
+        <!-- /#page-wrapper -->
+
+    </div>
+    <!-- /#wrapper -->
+
+    <!-- jQuery -->
+    <script src="bower_components/jquery/dist/jquery.min.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+
+    <!-- Metis Menu Plugin JavaScript -->
+    <script src="bower_components/metisMenu/dist/metisMenu.min.js"></script>
+
+    <!-- Morris Charts JavaScript -->
+    <script src="bower_components/raphael/raphael-min.js"></script>
+    <script src="bower_components/morrisjs/morris.min.js"></script>
+    <script src="js/morris-data.js"></script>
+
+    <!-- Custom Theme JavaScript -->
+    <script src="dist/js/sb-admin-2.js"></script>
+<div id="CLICKA_currentSessionId" style="display:none;">Def</div>
+</body>
+
+</html>

@@ -1,0 +1,14 @@
+
+#loadingdiv {
+
+	padding:5px;
+	background-color: #FFCC00;
+	position: fixed;
+	top:0px;
+	left:50%;
+	right:50%;
+	width:100px;
+	z-index:10000;
+	visibility:hidden;
+
+}
