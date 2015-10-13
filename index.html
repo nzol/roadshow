@@ -47,6 +47,12 @@
     <script src="phonegap.js"></script>
     <script type="text/javascript">
 
+    $( document ).bind( "mobileinit", function() {
+    // Make your jQuery Mobile framework configuration changes here!
+
+    $.mobile.allowCrossDomainPages = true;
+});
+
     var serverLocation = "http://172.18.1.74/roadshow/"
 
     function parseGet(val) {
@@ -132,6 +138,8 @@
     }
 
     $(window).load(function(){
+
+        alert("JQUERY IS WORKING!")
 
         var ping = ajaxRequest(serverLocation + "system/internaltarget.php?Action=ping");
         if(ping=="pong") {
